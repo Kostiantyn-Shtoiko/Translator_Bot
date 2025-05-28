@@ -1,2 +1,3 @@
 /start — opens the main menu with a language selection 🌍
 /help — you will get a short guide on how to use the bot 🆘
+/history - Shows translation history 🧠

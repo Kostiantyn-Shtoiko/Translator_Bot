@@ -6,8 +6,12 @@ from langdetect import detect
 import app.keyboards as kb
 
 router = Router()
+
 # Dictionary to store the language chosen by the user
 user_language = {}
+
+#[list of translations]
+user_history = {}
 
 # Start command /start
 @router.message(CommandStart())
@@ -37,6 +41,27 @@ async def info_callback(callback: CallbackQuery):
     await callback.message.answer(large_text)
     await callback.answer()
 
+# Processing the /history command
+@router.message(F.text == "/history")
+async def show_history(message: Message):
+    user_id = message.from_user.id
+    history = user_history.get(user_id)
+
+    # If there is no history, notify the user
+    if not history:
+        await message.answer("📭 Your translation history is empty.")
+        return
+
+    # Forming the text with the latest translations
+    text = "🕓 Recent translations:\n\n"
+    for item in history:
+        text += (
+            f"🔹 Original: `{item['original']}` ({item['from']} → {item['to']})\n"
+            f"➡️ Translated: `{item['translated']}`\n\n"
+        )
+
+    await message.answer(text, parse_mode="Markdown")
+
 # User selects translation language
 @router.callback_query(lambda c: c.data.startswith("to_"))
 async def choose_target_language(call: CallbackQuery):
@@ -58,6 +83,19 @@ async def translate_message(message: Message):
         translated = translator.translate(message.text)
 
         await message.answer(f"🌐 *Detected language:* `{lang_from}`\n📖 *Translation:* \n`{translated }`", parse_mode="Markdown")
+
+        # word storage history
+        user_history.setdefault(user_id, []).append({
+            "from": lang_from,
+            "to": lang_to,
+            "original": message.text,
+            "translated": translated
+        })
+
+        #  We only keep the last 5 translations:
+        if len(user_history[user_id]) > 5:
+            user_history[user_id] = user_history[user_id][-5:]
+
     except Exception as e:
         await message.answer(f"⚠ Translation error: {e}")
 
