@@ -3,7 +3,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, Message
 from translate import Translator
 from langdetect import detect
+from database import save_translation
 import app.keyboards as kb
+from database import get_user_history
 
 router = Router()
 
@@ -32,7 +34,7 @@ async def info_callback(callback: CallbackQuery):
     await callback.message.answer(large_text)
     await callback.answer()
 
-# Обробка кнопки "Help"
+# Handling the "Help" button
 @router.callback_query(F.data == "help")
 async def info_callback(callback: CallbackQuery):
     with open("text/help.txt", "r", encoding="utf-8") as file:
@@ -45,19 +47,18 @@ async def info_callback(callback: CallbackQuery):
 @router.message(F.text == "/history")
 async def show_history(message: Message):
     user_id = message.from_user.id
-    history = user_history.get(user_id)
+    history = get_user_history(user_id)
 
-    # If there is no history, notify the user
     if not history:
-        await message.answer("📭 Your translation history is empty.")
+        await message.answer("📭 The translation history is empty.")
         return
 
-    # Forming the text with the latest translations
-    text = "🕓 Recent translations:\n\n"
-    for item in history:
+    text = "🕓 Latest translations:\n\n"
+    for original, translated, lang_from, lang_to, date in history:
         text += (
-            f"🔹 Original: `{item['original']}` ({item['from']} → {item['to']})\n"
-            f"➡️ Translated: `{item['translated']}`\n\n"
+            f"📅 {date}\n"
+            f"🔸 `{original}` ({lang_from} → {lang_to})\n"
+            f"➡️ `{translated}`\n\n"
         )
 
     await message.answer(text, parse_mode="Markdown")
@@ -95,6 +96,14 @@ async def translate_message(message: Message):
         #  We only keep the last 5 translations:
         if len(user_history[user_id]) > 5:
             user_history[user_id] = user_history[user_id][-5:]
+
+        save_translation(
+            user_id=user_id,
+            original=message.text,
+            translated=translated,
+            lang_from=lang_from,
+            lang_to=lang_to
+        )
 
     except Exception as e:
         await message.answer(f"⚠ Translation error: {e}")
