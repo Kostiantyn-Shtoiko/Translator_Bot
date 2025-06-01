@@ -39,7 +39,8 @@ async def info_callback(callback: CallbackQuery):
     with open("text/about_us.txt", "r", encoding="utf-8") as file:
         large_text = file.read()
 
-    await callback.message.answer(large_text)
+
+    await callback.message.answer(large_text, reply_markup=kb.back_to_home)
     await callback.answer()
 
 # Handling the "Help" button
@@ -48,7 +49,7 @@ async def info_callback(callback: CallbackQuery):
     with open("text/help.txt", "r", encoding="utf-8") as file:
         large_text = file.read()
 
-    await callback.message.answer(large_text)
+    await callback.message.answer(large_text, reply_markup=kb.back_to_home)
     await callback.answer()
 
 #History button handling
@@ -57,14 +58,14 @@ async def open_history_menu(callback: CallbackQuery):
     await callback.message.answer("🔧 Choose an action with a story:", reply_markup=history_menu)
     await callback.answer()
 
-# Handling the "Help" button
+# Handling the "last_5" button
 @router.callback_query(F.data == "last_5")
 async def show_last_5(callback: CallbackQuery):
     user_id = callback.from_user.id
     history = user_history.get(user_id)
 
     if not history:
-        await callback.message.answer("📭 The translation history is empty.")
+        await callback.message.answer("📭 The translation history is empty.", reply_markup=kb.back_to_home)
         await callback.answer()
         return
 
@@ -74,7 +75,7 @@ async def show_last_5(callback: CallbackQuery):
     for item in last_five:
         text += f"🔸 `{item['original']}` ({item['from']} → {item['to']})\n➡️ `{item['translated']}`\n\n"
 
-    await callback.message.answer(text, parse_mode="Markdown")
+    await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.back_to_home)
     await callback.answer()
 
 # History clearing processing
@@ -84,9 +85,9 @@ async def clear_user_history(callback: CallbackQuery):
 
     if user_id in user_history:
         user_history[user_id] = []  # clearing the translation list
-        await callback.message.answer("🧹 Your translation history has been successfully cleared.")
+        await callback.message.answer("🧹 Your translation history has been successfully cleared.", reply_markup=kb.back_to_home)
     else:
-        await callback.message.answer("📭 You have no history to clean up.")
+        await callback.message.answer("📭 You have no history to clean up.", reply_markup=kb.back_to_home)
 
     await callback.answer()
 
@@ -97,7 +98,7 @@ async def show_all_history(callback: CallbackQuery):
     history = user_history.get(user_id)
 
     if not history:
-        await callback.message.answer("📭 You don't have any translations yet.")
+        await callback.message.answer("📭 You don't have any translations yet.", reply_markup=kb.back_to_home)
         await callback.answer()
         return
 
@@ -107,12 +108,9 @@ async def show_all_history(callback: CallbackQuery):
 
     # Telegram limits messages to 4096 characters
     for chunk in [text[i:i+4000] for i in range(0, len(text), 4000)]:
-        await callback.message.answer(chunk, parse_mode="Markdown")
+        await callback.message.answer(chunk, parse_mode="Markdown", reply_markup=kb.back_to_home)
 
     await callback.answer()
-
-import os
-
 
 # export_history
 @router.callback_query(F.data == "export_history")
@@ -121,7 +119,7 @@ async def export_translation_history(callback: CallbackQuery):
     history = user_history.get(user_id)
 
     if not history:
-        await callback.message.answer("📭 There are no translations to export.")
+        await callback.message.answer("📭 There are no translations to export.", reply_markup=kb.back_to_home)
         await callback.answer()
         return
 
@@ -140,7 +138,7 @@ async def export_translation_history(callback: CallbackQuery):
         file.write(text)
 
     # We send the file
-    await callback.message.answer_document(types.FSInputFile(filename), caption="📝 Here is your translation history file.")
+    await callback.message.answer_document(types.FSInputFile(filename), caption="📝 Here is your translation history file.", reply_markup=kb.back_to_home)
     await callback.answer()
 
     # Deleting the file after sending
@@ -154,7 +152,7 @@ async def show_history(message: Message):
     history = get_user_history(user_id)
 
     if not history:
-        await message.answer("📭 The translation history is empty.")
+        await message.answer("📭 The translation history is empty.", reply_markup=kb.back_to_home)
         return
 
     text = "🕓 Latest translations:\n\n"
@@ -165,14 +163,14 @@ async def show_history(message: Message):
             f"➡️ `{translated}`\n\n"
         )
 
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text, parse_mode="Markdown", reply_markup=kb.back_to_home)
 
 # User selects translation language
 @router.callback_query(lambda c: c.data.startswith("to_"))
 async def choose_target_language(call: CallbackQuery):
     user_id = call.from_user.id
     user_language[user_id] = call.data[3:]
-    await call.message.answer("✍ Send text for translation!")
+    await call.message.answer("✍ Send text for translation!", reply_markup=kb.back_to_home)
     await call.answer()
 
 # Translate messages if a language is already selected
@@ -187,7 +185,10 @@ async def translate_message(message: Message):
         translator = Translator(from_lang=lang_from, to_lang=lang_to)
         translated = translator.translate(message.text)
 
-        await message.answer(f"🌐 *Detected language:* `{lang_from}`\n📖 *Translation:* \n`{translated }`", parse_mode="Markdown")
+        await message.answer(f"🌐 *Detected language:* `{lang_from}`\n"
+                             f"📖 *Translation:* \n`{translated }`",
+                             parse_mode="Markdown",
+                             reply_markup=kb.back_to_home)
 
         # word storage history
         user_history.setdefault(user_id, []).append({
@@ -211,7 +212,7 @@ async def translate_message(message: Message):
         )
 
     except Exception as e:
-        await message.answer(f"⚠ Translation error: {e}")
+        await message.answer(f"⚠ Translation error: {e}", reply_markup=kb.back_to_home)
 
 # Processing a separate button for Russian (surprise mode)
 @router.callback_query(F.data == "ru")
@@ -219,5 +220,5 @@ async def info_callback(callback: CallbackQuery):
     with open("text/hymn.txt", "r", encoding="utf-8") as file:
         large_text = file.read()
 
-    await callback.message.answer(large_text)
+    await callback.message.answer(large_text, reply_markup=kb.back_to_home)
     await callback.answer()

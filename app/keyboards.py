@@ -55,3 +55,9 @@ history_menu = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="🔙 Back", callback_data="back")]
     ]
 )
+
+back_to_home = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Back", callback_data="back")]
+    ]
+)
