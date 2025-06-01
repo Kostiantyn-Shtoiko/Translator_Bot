@@ -26,7 +26,8 @@ choose_language = InlineKeyboardMarkup(
 # Special button with a joke/position regarding Russian
         [
             InlineKeyboardButton(text="💩 🇷🇺 💩", callback_data="ru")
-        ]
+        ],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="back")]
     ]
 )
 # Main menu
@@ -37,7 +38,20 @@ home = InlineKeyboardMarkup(
             InlineKeyboardButton(text="❓ Help", callback_data="help")
         ],
         [
+            InlineKeyboardButton(text="🕓 History", callback_data="history_menu")
+        ],
+        [
             InlineKeyboardButton(text="About us ©️", callback_data="about_us")
         ]
+    ]
+)
+# Creation history menu
+history_menu = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🔹 The last 5", callback_data="last_5")],
+        [InlineKeyboardButton(text="📜 The whole story", callback_data="all_history")],
+        [InlineKeyboardButton(text="🧹 Clean up", callback_data="clear_history")],
+        [InlineKeyboardButton(text="📤 Export", callback_data="export_history")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="back")]
     ]
 )

@@ -5,7 +5,10 @@ from translate import Translator
 from langdetect import detect
 from database import save_translation
 import app.keyboards as kb
+from app.keyboards import history_menu
 from database import get_user_history
+from datetime import datetime
+import os
 
 router = Router()
 
@@ -25,6 +28,11 @@ async def cmd_start(message: Message):
 async def info_callback(callback: CallbackQuery):
     await callback.message.answer("🌍 Choose a language to translate:", reply_markup=kb.choose_language)
 
+# Handling the "Back" button press
+@router.callback_query(F.data == "back")
+async def info_callback(callback: CallbackQuery):
+    await callback.message.answer("🔤 Welcome to the translation bot", reply_markup=kb.home)
+
 # Processing the "About us" button
 @router.callback_query(F.data == "about_us")
 async def info_callback(callback: CallbackQuery):
@@ -42,6 +50,102 @@ async def info_callback(callback: CallbackQuery):
 
     await callback.message.answer(large_text)
     await callback.answer()
+
+#History button handling
+@router.callback_query(F.data == "history_menu")
+async def open_history_menu(callback: CallbackQuery):
+    await callback.message.answer("🔧 Choose an action with a story:", reply_markup=history_menu)
+    await callback.answer()
+
+# Handling the "Help" button
+@router.callback_query(F.data == "last_5")
+async def show_last_5(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    history = user_history.get(user_id)
+
+    if not history:
+        await callback.message.answer("📭 The translation history is empty.")
+        await callback.answer()
+        return
+
+    last_five = history[-5:]
+    text = "🕔 Latest translations:\n\n"
+
+    for item in last_five:
+        text += f"🔸 `{item['original']}` ({item['from']} → {item['to']})\n➡️ `{item['translated']}`\n\n"
+
+    await callback.message.answer(text, parse_mode="Markdown")
+    await callback.answer()
+
+# History clearing processing
+@router.callback_query(F.data == "clear_history")
+async def clear_user_history(callback: CallbackQuery):
+    user_id = callback.from_user.id
+
+    if user_id in user_history:
+        user_history[user_id] = []  # clearing the translation list
+        await callback.message.answer("🧹 Your translation history has been successfully cleared.")
+    else:
+        await callback.message.answer("📭 You have no history to clean up.")
+
+    await callback.answer()
+
+#View all translation history
+@router.callback_query(F.data == "all_history")
+async def show_all_history(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    history = user_history.get(user_id)
+
+    if not history:
+        await callback.message.answer("📭 You don't have any translations yet.")
+        await callback.answer()
+        return
+
+    text = "📚 All translation history:\n\n"
+    for item in history:
+        text += f"🔸 `{item['original']}` ({item['from']} → {item['to']})\n➡️ `{item['translated']}`\n🗓 {item.get('date', '—')}\n\n"
+
+    # Telegram limits messages to 4096 characters
+    for chunk in [text[i:i+4000] for i in range(0, len(text), 4000)]:
+        await callback.message.answer(chunk, parse_mode="Markdown")
+
+    await callback.answer()
+
+import os
+
+
+# export_history
+@router.callback_query(F.data == "export_history")
+async def export_translation_history(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    history = user_history.get(user_id)
+
+    if not history:
+        await callback.message.answer("📭 There are no translations to export.")
+        await callback.answer()
+        return
+
+    text = "📤 Translation History\n\n"
+    for item in history:
+        text += (
+            f"Original: {item['original']}\n"
+            f"Translated: {item['translated']}\n"
+            f"From: {item['from']} → To: {item['to']}\n"
+            f"Date: {item.get('date', '—')}\n\n"
+        )
+
+    # Save to a temporary file
+    filename = f"history_{user_id}.txt"
+    with open(filename, "w", encoding="utf-8") as file:
+        file.write(text)
+
+    # We send the file
+    await callback.message.answer_document(types.FSInputFile(filename), caption="📝 Here is your translation history file.")
+    await callback.answer()
+
+    # Deleting the file after sending
+    os.remove(filename)
+
 
 # Processing the /history command
 @router.message(F.text == "/history")
@@ -67,7 +171,7 @@ async def show_history(message: Message):
 @router.callback_query(lambda c: c.data.startswith("to_"))
 async def choose_target_language(call: CallbackQuery):
     user_id = call.from_user.id
-    user_language[user_id] = call.data[3:]  # Зберігаємо вибрану мову
+    user_language[user_id] = call.data[3:]
     await call.message.answer("✍ Send text for translation!")
     await call.answer()
 
@@ -87,10 +191,11 @@ async def translate_message(message: Message):
 
         # word storage history
         user_history.setdefault(user_id, []).append({
+            "original": message.text,
+            "translated": translated,
             "from": lang_from,
             "to": lang_to,
-            "original": message.text,
-            "translated": translated
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M")
         })
 
         #  We only keep the last 5 translations:
