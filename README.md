@@ -46,8 +46,14 @@ __pycache__/
 translations.db
 
 
+## Images
+
+https://github.com/Kostiantyn-Shtoiko/Translator_Bot/tree/main/images
+
+
 
 🧑‍💻 Author
+
 💼 GitHub: [@yourusername](https://github.com/Kostiantyn-Shtoiko)
 
 ✉️ Telegram: [ @yourusername](https://t.me/Kostiantyn_Shtoiko)
