@@ -5,6 +5,7 @@ from translate import Translator
 from langdetect import detect
 from database import save_translation
 import app.keyboards as kb
+import sqlite3
 from app.keyboards import history_menu
 from database import get_user_history
 from datetime import datetime
